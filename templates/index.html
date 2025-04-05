@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>News Recommender</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>News Recommender System</h1>
+
+        <form method="POST" class="form">
+            <label for="contentId">Select an ItemID:</label>
+            <select name="contentId" id="contentId" required>
+                <option value="" disabled {% if not content_id %}selected{% endif %}>Select an ItemID</option>
+                {% for cid in content_ids %}
+                    <option value="{{ cid }}" {% if cid == content_id %}selected{% endif %}>{{ cid }}</option>
+                {% endfor %}
+            </select>
+            <input type="submit" value="Get Recommendations">
+        </form>
+
+        {% if collab_recs is not none or content_recs is not none or azure_recs is not none %}
+        <div class="results">
+            {% if collab_recs %}
+                <h2>Collaborative Filtering Recommendations</h2>
+                <ul>
+                    {% for rec in collab_recs %}
+                        <li>{{ rec }}</li>
+                    {% endfor %}
+                </ul>
+            {% elif collab_recs is not none %}
+                <h2>Collaborative Filtering Recommendations</h2>
+                <p>No collaborative recommendations found for this item.</p>
+            {% endif %}
+
+            {% if content_recs %}
+                <h2>Content-Based Recommendations</h2>
+                <ul>
+                    {% for rec in content_recs %}
+                        <li>{{ rec }}</li>
+                    {% endfor %}
+                </ul>
+            {% elif content_recs is not none %}
+                <h2>Content-Based Recommendations</h2>
+                <p>No content-based recommendations found for this item.</p>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if content_id %}
+        <div class="results">
+            <h2>Azure ML Recommendations</h2>
+
+            {% if azure_recs %}
+                <ul>
+                    {% for rec in azure_recs %}
+                        <li>{{ rec }}</li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>No recommendations received from Azure ML endpoint.</p>
+            {% endif %}
+
+            <p>We deployed our Azure model to an endpoint, but every time we connected the API, we got <code>{"Results": {}}</code></p>
+            <img src="{{ url_for('static', filename='deployed azure model.png') }}" alt="Azure Model Screenshot" width="500">
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>
