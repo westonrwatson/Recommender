@@ -5,10 +5,10 @@ import json
 
 app = Flask(__name__)
 
-# Load CSVs and extract available titles for dropdown
+# Load CSVs and extract available contentIds for dropdown
 collab_df = pd.read_csv("models/collab_recs_full.csv")
 content_df = pd.read_csv("models/content_recs_full.csv")
-titles = collab_df["title"].drop_duplicates().head(10).tolist()
+item_ids = collab_df["contentId"].dropna().astype(str).head(10).tolist()
 
 # Azure ML API Call
 def get_azure_recommendations(user_id):
@@ -36,31 +36,33 @@ fixed_user_id = -6.824891492208524e+18
 
 @app.route("/", methods=["GET", "POST"])
 def index():
-    selected_title = ""
+    selected_id = ""
     collab_recs = []
     content_recs = []
     azure_recs = []
 
     if request.method == "POST":
-        selected_title = request.form.get("title")
+        selected_id = request.form.get("contentId")
 
         # Collaborative
-        collab_row = collab_df[collab_df["title"] == selected_title]
+        collab_row = collab_df[collab_df["contentId"].astype(str) == selected_id]
         if not collab_row.empty:
-            collab_recs = collab_row.iloc[0, 1:].dropna().tolist()
+            collab_recs = [str(val) for val in collab_row.iloc[0, 1:].dropna().values]
 
         # Content
-        content_row = content_df[content_df["Title"] == selected_title]
+        content_row = content_df[content_df["contentId"].astype(str) == selected_id]
         if not content_row.empty:
-            content_recs = content_row.iloc[0, 1:].dropna().tolist()
+            content_recs = ["{:.0f}".format(val) if isinstance(val, (int, float)) else str(val)
+                for val in content_row.iloc[0, 1:].dropna().values]
+
 
         # Azure ML
-        azure_recs = get_azure_recommendations(fixed_user_id)
+        azure_recs = [str(r) for r in get_azure_recommendations(fixed_user_id)]
 
     return render_template(
         "index.html",
-        titles=titles,
-        selected_title=selected_title,
+        item_ids=item_ids,
+        selected_id=selected_id,
         collab_recs=collab_recs,
         content_recs=content_recs,
         azure_recs=azure_recs

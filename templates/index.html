@@ -10,16 +10,16 @@
         <h1>News Recommender System</h1>
 
         <form method="POST" class="form">
-            <label for="title">Select a Title:</label>
-            <select name="title" id="title" required>
-                <option value="" disabled {% if not selected_title %}selected{% endif %}>Select a Title</option>
-                {% for t in titles %}
-                    <option value="{{ t }}" {% if t == selected_title %}selected{% endif %}>{{ t }}</option>
+            <label for="contentId">Select an Item ID:</label>
+            <select name="contentId" id="contentId" required>
+                <option value="" disabled {% if not selected_id %}selected{% endif %}>Select an Item ID</option>
+                {% for cid in item_ids %}
+                    <option value="{{ cid }}" {% if cid == selected_id %}selected{% endif %}>{{ cid }}</option>
                 {% endfor %}
             </select>
             <input type="submit" value="Get Recommendations">
         </form>
-        
+
         {% if collab_recs or content_recs or azure_recs %}
         <div class="results">
         
@@ -27,14 +27,14 @@
                 <h2>Collaborative Filtering Recommendations</h2>
                 <ul>{% for rec in collab_recs %}<li>{{ rec }}</li>{% endfor %}</ul>
             {% else %}
-                <p>No collaborative recommendations found for this title.</p>
+                <p>No collaborative recommendations found for this item.</p>
             {% endif %}
         
             {% if content_recs %}
                 <h2>Content-Based Recommendations</h2>
-                <ul>{% for rec in content_recs %}<li>{{ rec }}</li>{% endfor %}</ul>
+                <ul>{% for rec in content_recs %}<li>{{ rec|string }}</li>{% endfor %}</ul>
             {% else %}
-                <p>No content-based recommendations found for this title.</p>
+                <p>No content-based recommendations found for this item.</p>
             {% endif %}
         
             <h2>Azure ML Recommendations</h2>
