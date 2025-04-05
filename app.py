@@ -5,16 +5,12 @@ import json
 
 app = Flask(__name__)
 
-# Load article and collab data
+# Load CSVs and extract available titles for dropdown
 collab_df = pd.read_csv("models/collab_recs_full.csv")
-articles_df = pd.read_csv("data/shared_articles.csv")
-articles_df = articles_df[articles_df["eventType"] == "CONTENT SHARED"]
+content_df = pd.read_csv("models/content_recs_full.csv")
+titles = collab_df["title"].drop_duplicates().head(10).tolist()
 
-# Filter for valid contentIds with collab recommendations
-valid_collab_ids = collab_df["baseContentId"].unique().tolist()
-sample_contents = articles_df[articles_df["contentId"].isin(valid_collab_ids)]["contentId"].drop_duplicates().head(10).tolist()
-
-# Azure ML inference function
+# Azure ML API Call
 def get_azure_recommendations(user_id):
     url = 'http://c2226c7d-8e63-4cba-a4dc-f01e0fc99484.eastus2.azurecontainer.io/score'
     key = 'ZILBksIkG2shhQBrCOIYAinjjgKY9iBi'
@@ -36,37 +32,35 @@ def get_azure_recommendations(user_id):
         print("Azure request failed:", e)
         return ["results: {}"]
 
-# Fixed user for Azure test
 fixed_user_id = -6.824891492208524e+18
 
 @app.route("/", methods=["GET", "POST"])
 def index():
-    collab_recs = None
-    content_recs = None
-    azure_recs = None
-    content_id = ""
+    selected_title = ""
+    collab_recs = []
+    content_recs = []
+    azure_recs = []
 
     if request.method == "POST":
-        content_id = int(request.form.get("contentId"))
+        selected_title = request.form.get("title")
 
-        collab_df_full = pd.read_csv("models/collab_recs_full.csv")
-        content_df = pd.read_csv("models/content_recs_full.csv")
+        # Collaborative
+        collab_row = collab_df[collab_df["title"] == selected_title]
+        if not collab_row.empty:
+            collab_recs = collab_row.iloc[0, 1:].dropna().tolist()
 
-        # Collaborative filtering
-        collab_top = collab_df_full[collab_df_full["baseContentId"] == content_id]
-        collab_recs = collab_top.nlargest(5, "similarity")["recommendedContentId"].tolist() if not collab_top.empty else []
-
-        # Content filtering
-        content_top = content_df[content_df["baseContentId"] == content_id]
-        content_recs = content_top.nlargest(5, "similarity")["recommendedContentId"].tolist() if not content_top.empty else []
+        # Content
+        content_row = content_df[content_df["Title"] == selected_title]
+        if not content_row.empty:
+            content_recs = content_row.iloc[0, 1:].dropna().tolist()
 
         # Azure ML
         azure_recs = get_azure_recommendations(fixed_user_id)
 
     return render_template(
         "index.html",
-        content_id=content_id,
-        content_ids=sample_contents,
+        titles=titles,
+        selected_title=selected_title,
         collab_recs=collab_recs,
         content_recs=content_recs,
         azure_recs=azure_recs
